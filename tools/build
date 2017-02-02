@@ -1,0 +1,40 @@
+#!/usr/bin/env zsh
+
+here=$0:A:h
+root=$here:h
+builddir=$root/_build
+
+domain=zhimingwang.org
+# Based on default options on https://kangax.github.io/html-minifier/
+html_minifier_opts=(
+    --collapse-boolean-attributes
+    --collapse-whitespace
+    --conservative-collapse # non-default, but much safer
+    --decode-entities
+    --html5
+    --minify-css
+    --minify-js
+    --process-conditional-comments
+    --remove-attribute-quotes
+    --remove-comments
+    --remove-empty-attributes
+    # --remove-optional-tags (questionable)
+    # --remove-redundant-attributes (dangerous, could break CSS selectors)
+    --remove-script-type-attributes
+    --remove-style-link-type-attributes
+    # --remove-tag-whitespace (dangerous)
+    --sort-attributes
+    --sort-class-name
+    # --trim-custom-fragments (useless for me)
+    # --use-short-doctype (useless for me)
+)
+
+mkdir -p $builddir
+
+# GitHub Pages custom domain
+echo $domain >$builddir/CNAME
+
+html-minifier $html_minifier_opts <$root/index.html >$builddir/index.html
+
+rsync $root/favicon.ico $builddir
+rsync -r $root/assets $builddir
