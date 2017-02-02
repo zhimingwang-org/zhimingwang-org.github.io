@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+setopt errexit
+[[ -n $DEBUG ]] && setopt xtrace
+
+trap 'print "$0:$LINENO failed with status $?" >&2' ZERR
+
 here=$0:A:h
 root=$here:h
 builddir=$root/_build
@@ -29,6 +34,16 @@ html_minifier_opts=(
     # --use-short-doctype (useless for me)
 )
 
+[[ $1 == (-h|--help) ]] && {
+    cat >&2 <<EOF
+$0:t [-n|--no-commit] [-h|--help]
+EOF
+    exit 1
+}
+
+no_commit=0
+[[ $1 == (-n|--no-commit) ]] && no_commit=1
+
 mkdir -p $builddir
 
 # GitHub Pages custom domain
@@ -38,3 +53,23 @@ html-minifier $html_minifier_opts <$root/index.html >$builddir/index.html
 
 rsync $root/favicon.ico $builddir
 rsync -r $root/assets $builddir
+
+(( no_commit )) && exit
+
+[[ -z "$(git -C $root status --porcelain)" ]] || {
+    read -q 'proceed?Root directory is dirty; proceed to commit? [yN] ' || :
+    print >&2
+    [[ $proceed == y ]] || exit 1
+}
+
+source_commit_desc="$(git -C $root log -1 --oneline)"
+commit_datetime="$(date +%Y-%m-%dT%H:%M:%S%z)"
+build_commit_msg="$commit_datetime build
+
+$source_commit_desc"
+git -C $builddir add -A
+if git -C $builddir diff-index --quiet HEAD; then
+    print 'nothing to commit' >&2
+else
+    git -C $builddir commit -n -m $build_commit_msg
+fi
