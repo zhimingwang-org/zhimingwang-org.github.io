@@ -21,4 +21,4 @@ builddir=$root/_build
     [[ $proceed == y ]] || exit 1
 }
 
-git -C $builddir push origin gh-pages:gh-pages
+git -C $builddir push origin master:master
